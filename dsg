@@ -1,0 +1,51 @@
+const { SlashCommandBuilder } = require('@discordjs/builders');
+const { MessageEmbed }= require('discord.js');
+const moment = require('moment');
+const { mem, cpu, os } = require('node-os-utils');
+const { stripIndent } = require('common-tags');
+const Discord = require("discord.js");
+const { execute } = require('./dev');
+const { ownerId } = require('../config.json');
+
+module.exports = {
+	data: new SlashCommandBuilder()
+		.setName('botinfo')
+		.setDescription('Commande pour les admin du support.'),
+
+	async execute(client, interaction, message, args) {
+
+		if (interaction.member.id !== ownerId) return;
+
+		const d = moment.duration(client.uptime);
+		const days = (d.days() == 1) ? `${d.days()} day` : `${d.days()} days`;
+		const hours = (d.hours() == 1) ? `${d.hours()} hour` : `${d.hours()} hours`;
+		const clientStats = stripIndent`
+		  Servers   :: ${client.guilds.cache.size}
+		  Users     :: ${client.users.cache.size}
+		  Channels  :: ${client.channels.cache.size}
+		  WS Ping   :: ${Math.round(client.ws.ping)}ms
+		  Uptime    :: ${days} and ${hours}
+	   `;
+		const { totalMemMb, usedMemMb } = await mem.info();
+		const serverStats = stripIndent`
+		  OS        :: ${await os.oos()}
+		  Cores     :: ${cpu.count()}
+		  CPU Usage :: ${await cpu.usage()} %
+		  RAM       :: ${totalMemMb} MB
+		  RAM Usage :: ${usedMemMb} MB
+		`;
+	
+		const embed = new MessageEmbed()
+		.setTitle('Bot Statistics')
+		.addField('Commands', `\`${client.commands.size}\` commands`, true)
+		.addField('Info du bot', `\`\`\`asciidoc\n${clientStats}\`\`\``)
+		.addField('Puissance du bot', `\`\`\`asciidoc\n${serverStats}\`\`\``)
+		.setFooter({text: `${interaction.user.username}`,iconURL: interaction.user.displayAvatarURL({ dynamic: true })})
+		.setTimestamp()
+		.setColor(interaction.guild.me.displayHexColor);
+
+		await interaction.reply({ embeds: [embed] });
+	 
+	},
+
+};
